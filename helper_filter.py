@@ -1,5 +1,12 @@
+import os
 import glob
 import pandas as pd
+
+class DataTable():
+    def __init__(self, folder_name, file_name, data):
+        self.folder_name = folder_name
+        self.file_name = file_name
+        self.data = data
 
 def load_data(folder_path):
     file_list = glob.glob(folder_path + "/*.dat") 
@@ -21,6 +28,11 @@ def load_data(folder_path):
         for col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
-        files.append(df)
+        # Create table
+        table = DataTable(folder_name=os.path.basename(folder_path),
+                          file_name=os.path.basename(file_list[i]),
+                          data=df)
+
+        files.append(table)
 
     return files
