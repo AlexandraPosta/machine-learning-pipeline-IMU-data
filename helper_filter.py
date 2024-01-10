@@ -2,13 +2,15 @@ import os
 import glob
 import pandas as pd
 
+
 class DataTable():
     def __init__(self, folder_name, file_name, data):
         self.folder_name = folder_name
         self.file_name = file_name
         self.data = data
-        self.data_filtered = None
-        self.data_processed = None
+        self.data_filtered = data
+        self.data_processed = data
+
 
 def load_data(folder_path):
     file_list = glob.glob(folder_path + "/*.dat") 
