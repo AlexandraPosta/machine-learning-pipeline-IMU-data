@@ -7,6 +7,8 @@ class DataTable():
         self.folder_name = folder_name
         self.file_name = file_name
         self.data = data
+        self.data_filtered = None
+        self.data_processed = None
 
 def load_data(folder_path):
     file_list = glob.glob(folder_path + "/*.dat") 
