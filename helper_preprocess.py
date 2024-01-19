@@ -39,13 +39,16 @@ features = {
 
 
 def generate_features(data, window_size, time_step):    
-    results = {}
+    # Window parameters
+    ts = data["Timestamp"].diff().median()      # Median sampling time
+    stride = int(time_step/ts)                  # Stride length
+    output = pd.DataFrame()
 
-    # Apply the rolling windowing function to each column
-    for column in data.columns:
-        for feature_name, feature_func in features.items():
-            if feature_name != 'Timestamp':
-                results[f'{column}_{feature_name}'] = data[column].rolling(window=window_size).apply(feature_func, raw=True)
-    
-    # Combine results into a new DataFrame
-    return pd.DataFrame(results)
+    for feature_name, feature_func in features.items():
+        for col in data.columns:
+            if feature_name == "maxgradient":
+                output[f"{col}_{feature_name}"] = data[col].rolling(window_size).apply(feature_func)[::stride]
+            else:
+                output[f"{col}_{feature_name}"] = data[col].rolling(window_size, min_periods=1).apply(feature_func)[window_size-1::stride]
+
+    return output
