@@ -19,11 +19,15 @@ def rms(x):
 
 
 def max_gradient(x):
-    return np.max(np.gradient(x))
+    if len(x) < 2:
+        return 0
+    else:
+        return np.max(np.gradient(x))
 
 
 def zero_crossings(x):
-    return ((x[:-1] * x[1:]) < 0).sum()
+    signs = np.sign(x)
+    return np.sum(np.abs(np.diff(signs)) > 1)
 
 
 # Define features
@@ -42,13 +46,18 @@ def generate_features(data, window_size, time_step):
     # Window parameters
     ts = data["Timestamp"].diff().median()      # Median sampling time
     stride = int(time_step/ts)                  # Stride length
-    output = pd.DataFrame()
+    output = pd.DataFrame()                     # Output dataframe
+    data = data.drop('Timestamp', axis=1)
 
+    # Sliding window approach
     for feature_name, feature_func in features.items():
         for col in data.columns:
-            if feature_name == "maxgradient":
-                output[f"{col}_{feature_name}"] = data[col].rolling(window_size).apply(feature_func)[::stride]
-            else:
-                output[f"{col}_{feature_name}"] = data[col].rolling(window_size, min_periods=1).apply(feature_func)[window_size-1::stride]
-
+            output[f"{col}_{feature_name}"] = data[col].rolling(window_size, min_periods=1).apply(feature_func)[::stride]
     return output
+
+
+def get_one_hot_encoding(folders):
+    names = []
+    for folder in folders:
+        names.append(folder[0].folder_name)
+    return pd.get_dummies(names)
