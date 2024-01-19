@@ -1,5 +1,24 @@
 import pandas as pd
 import numpy as np
+from scipy.signal import butter, lfilter, butter
+
+
+def butter_lowpass_filter(data, cutoff, fs, order=5):
+    b, a = butter(order, cutoff, fs=fs, btype='low', analog=False)
+    y = lfilter(b, a, data)
+    return y
+
+
+def low_pass_filter(data):
+    # Sampling time; the frequency of the data is the difference 
+    # between consecutive time-stamps
+    ts = data["Timestamp"].diff().median()  # Median sampling time
+    fs = 1000/ts                            # Sampling frequency
+    N = 3;                                  # Order of the Low Pass Filter (trial and error)
+    cutoff = 25.0;                          # Cutoff frequency of the filter (trial and error)
+    lpf_data = butter_lowpass_filter(data, cutoff, fs, N)
+    return lpf_data
+
 
 def rms(x):
     return np.sqrt(np.mean(x**2))
