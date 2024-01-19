@@ -3,21 +3,15 @@ import numpy as np
 from scipy.signal import butter, lfilter, butter
 
 
-def butter_lowpass_filter(data, cutoff, fs, order=5):
-    b, a = butter(order, cutoff, fs=fs, btype='low', analog=False)
-    y = lfilter(b, a, data)
-    return y
-
-
-def low_pass_filter(data):
-    # Sampling time; the frequency of the data is the difference 
-    # between consecutive time-stamps
-    ts = data["Timestamp"].diff().median()  # Median sampling time
-    fs = 1000/ts                            # Sampling frequency
-    N = 3;                                  # Order of the Low Pass Filter (trial and error)
-    cutoff = 25.0;                          # Cutoff frequency of the filter (trial and error)
-    lpf_data = butter_lowpass_filter(data, cutoff, fs, N)
-    return lpf_data
+def low_pass_filter(ts, data):
+    # Filter coefficients
+    fs = 1000/ts            # Sampling frequency
+    N = 3;                  # Order of the Low Pass Filter (trial and error)
+    cutoff = 25.0;          # Cutoff frequency of the filter (trial and error)
+    
+    # Apply filter
+    b, a = butter(N, cutoff, fs=fs, btype='low', analog=False)
+    return lfilter(b, a, data)
 
 
 def rms(x):
@@ -50,7 +44,8 @@ def generate_features(data, window_size, time_step):
     # Apply the rolling windowing function to each column
     for column in data.columns:
         for feature_name, feature_func in features.items():
-            results[f'{column}_{feature_name}'] = data[column].rolling(window=window_size).apply(feature_func, raw=True)
+            if feature_name != 'Timestamp':
+                results[f'{column}_{feature_name}'] = data[column].rolling(window=window_size).apply(feature_func, raw=True)
     
     # Combine results into a new DataFrame
     return pd.DataFrame(results)
