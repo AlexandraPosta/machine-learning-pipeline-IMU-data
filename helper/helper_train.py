@@ -5,10 +5,19 @@ import numpy as np
 
 from sklearn.preprocessing import StandardScaler 
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
-from sklearn.neural_network import MLPRegressor
+from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 from sklearn import metrics
 from sklearn.inspection import permutation_importance
+
+
+label_map = {
+    1: 'LGW',
+    2: 'Ramp_ascend',
+    3: 'Ramp_descend',
+    4: 'Sit_to_stand',
+    5: 'Stand_to_sit',
+}
 
 
 # Metrics
@@ -18,23 +27,20 @@ def get_metrics(true, pred):
     print("Recall: ", metrics.recall_score(true, pred, average='weighted', zero_division=0))
     print("Classification error: ", 1/metrics.accuracy_score(true, pred))
     #print(metrics.classification_report(true, pred, zero_division=0))
-    #print(metrics.confusion_matrix(true, pred))
 
 
 def plot_cm(y_true, y_pred, labels, font_scale=0.8): 
     # Plot the confusion matrix
     cm = metrics.confusion_matrix(y_true, y_pred, normalize='true')    
-    fig, ax = plt.subplots(figsize=(24, 20)) 
+    fig, ax = plt.subplots() 
+    ax = sns.heatmap(cm, annot=False, linewidth=0.01, fmt=".3f", ax=ax)
 
-    cmap = sns.diverging_palette(220, 20, sep=20, as_cmap=True)
-    ax = sns.heatmap(cm, cmap=cmap, annot=False, linewidth=0.01, fmt=".3f", ax=ax)
-
-    plt.ylabel('Actual', fontsize=40)
-    plt.xlabel('Predicted', fontsize=40)
-    ax.set_xticklabels(labels, fontsize=24)
-    ax.set_yticklabels(labels, rotation=0, fontsize=24)
+    plt.ylabel('Actual', fontsize=20)
+    plt.xlabel('Predicted', fontsize=20)
+    ax.set_xticklabels(labels, fontsize=12, rotation=90)
+    ax.set_yticklabels(labels, fontsize=12, rotation=0)
     cbar = ax.collections[0].colorbar
-    cbar.ax.tick_params(labelsize=40)
+    cbar.ax.tick_params(labelsize=12)
     plt.show()
 
 
@@ -45,7 +51,7 @@ class ANN():
         self.y_train = y_train.values.ravel()
         self.X_test  = X_test
         self.y_test  = y_test.values.ravel()
-        self.model = MLPRegressor()
+        self.model = MLPClassifier()
 
     def run_pipeline(self):
         self.get_hyperparameter_tuning()
@@ -53,7 +59,7 @@ class ANN():
         self.predict()
 
     def train(self):
-        self.model = MLPRegressor(**self.best_params, random_state=10)
+        self.model = MLPClassifier(**self.best_params, random_state=10)
 
         # Train model
         self.model.fit(self.X_train, self.y_train)
@@ -79,7 +85,7 @@ class ANN():
         self.X_test = scaler.transform(self.X_test)
 
         # Grid search random
-        estimator = MLPRegressor()
+        estimator = MLPClassifier()
         gsc_random = RandomizedSearchCV(estimator, param_grid, cv=5, verbose=-1, random_state=42, n_jobs=-1)
         gsc_random.fit(self.X_train, self.y_train)
         self.best_params =  gsc_random.best_params_
@@ -88,9 +94,10 @@ class ANN():
         self.y_pred = self.model.predict(self.X_test)
 
     def evaluate(self):
-        pred = [round(item) for item in pred]
+        pred = [round(item) for item in self.y_pred]
         get_metrics(self.y_test, pred)
-        plot_cm(self.y_test, pred, self.model.classes_)
+        label = [label_map[i] for i in self.model.classes_]
+        plot_cm(self.y_test, pred, label)
 
     def get_accuracy(self):
         pred = [round(item) for item in self.y_pred]
@@ -155,9 +162,10 @@ class SVM():
         self.y_pred = self.model.predict(self.X_test)
 
     def evaluate(self):
-        pred = [round(item) for item in pred]
+        pred = [round(item) for item in self.y_pred]
         get_metrics(self.y_test, pred)
-        plot_cm(self.y_test, pred, self.model.classes_)
+        label = [label_map[i] for i in self.model.classes_]
+        plot_cm(self.y_test, pred, label)
 
     def get_accuracy(self):
         pred = [round(item) for item in self.y_pred]
