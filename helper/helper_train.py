@@ -1,12 +1,21 @@
+# Statistics and visualisation
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 import numpy as np
 
+# Machine learning
 from sklearn.preprocessing import StandardScaler 
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
+
+# Deep learning
+from keras.models import Model
+from keras import Sequential
+from keras.layers import (Input, Conv1D, MaxPooling1D, Dropout,
+                          BatchNormalization, Dense, Activation, Add, Flatten)
+
+# Metrics
 from sklearn import metrics
 from sklearn.inspection import permutation_importance
 
@@ -209,6 +218,97 @@ class SVM():
 
         # Return features names and their importance score
         return columns[sorted_idx[-15:]], perm_importance.importances_mean[sorted_idx[-15:]]
+
+
+# CNN
+def ResNet1D(input_dims, residual_blocks_dims, nclasses,
+             dropout_rate=0.8, kernel_size=2, kernel_initializer='he_normal'):
+    # Residual Block
+    def residual_block(X, nsamples_in, nsamples_out,
+                       nfilters_in, nfilters_out, first_block):
+        # Skip Connection
+        # Deal with downsampling
+        downsample = nsamples_in // nsamples_out
+
+        if downsample > 1:
+            Y = MaxPooling1D(downsample, strides=downsample, padding='same')(X)
+        elif downsample == 1:
+            Y = X
+        else:
+            raise ValueError("Number of samples should always decrease.")
+        
+        # Deal with nfiters dimension increase
+        if nfilters_in != nfilters_out:
+            Y = Conv1D(nfilters_out, 1, padding='same', 
+                       use_bias=False, kernel_initializer=kernel_initializer)(Y)
+
+        # End of 2nd layer from last residual block
+        if not first_block:
+            X = BatchNormalization()(X)
+            X = Activation('relu')(X)
+            X = Dropout(dropout_rate)(X)
+
+        # 1st layer
+        X = Conv1D(nfilters_out, kernel_size, strides=downsample, padding='same', 
+                   use_bias=False, kernel_initializer=kernel_initializer)(X)
+        X = BatchNormalization()(X)
+        X = Activation('relu')(X)
+        X = Dropout(dropout_rate)(X)
+
+        # 2nd layer
+        X = Conv1D(nfilters_out, kernel_size, padding='same',
+                   use_bias=False, kernel_initializer=kernel_initializer)(X)
+        X = Add()([X, Y]) # Skip connection and main connection
+        return X
+    
+    # Define input representing IMU_data
+    IMU_data = Input(shape=input_dims, dtype=np.float32, name='IMU_data')
+    X = IMU_data
+    
+    # First layer
+    downsample = input_dims[0] // residual_blocks_dims[0][0]
+    X = Conv1D(residual_blocks_dims[0][1], kernel_size, strides=downsample, 
+               padding='same', kernel_initializer=kernel_initializer, 
+               use_bias=False)(X)
+    X = BatchNormalization()(X)
+    X = Activation('relu')(X)
+
+    # Residual blocks
+    first_block = True
+    nresidual_blocks = len(residual_blocks_dims) - 1
+    for i in range(nresidual_blocks):
+        X = residual_block(X, residual_blocks_dims[i][0], residual_blocks_dims[i+1][0], 
+                           residual_blocks_dims[i][1], residual_blocks_dims[i+1][1], first_block)
+        first_block = False   
+        
+    # End of 2nd layer from last residual block
+    X = BatchNormalization()(X)
+    X = Activation('relu')(X)
+    X = Dropout(dropout_rate)(X)
+
+    # Last layer
+    X = Flatten()(X)
+    diagnosis = Dense(nclasses, kernel_initializer=kernel_initializer, 
+                      activation='softmax', name='diagnosis')(X)
+
+    return Model(IMU_data, diagnosis)
+
+
+def CNN(input_dims, nclasses, kernel_size=2):
+    n_features = input_dims[0]
+
+    # Init model
+    model = Sequential()
+
+    # Add layers
+    model.add(Conv1D(filters=32, kernel_size=kernel_size, activation='relu', input_shape=(n_features, 1), padding='same'))
+    model.add(Flatten())   # 1D array
+    model.add(Dense(nclasses, activation='softmax'))    
+    model.compile(loss="sparse_categorical_crossentropy", 
+                  optimizer='adam', 
+                  metrics=['accuracy'])
+    
+    return model
 
 
 # Comparison model
