@@ -39,7 +39,6 @@ def get_metrics(true, pred):
 
 
 def plot_cm(y_true, y_pred, labels, font_scale=0.8): 
-    labels = [1, 2, 3, 4, 5]
     # Plot the confusion matrix
     cm = metrics.confusion_matrix(y_true, y_pred, normalize='true')    
     fig, ax = plt.subplots() 
@@ -59,7 +58,7 @@ def plot_val(grid):
     num_folds = grid.cv
 
     # Plotting the results
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 5.5))
 
     for i in range(len(cv_results['params'])):
         fold_accuracies = [cv_results[f'split{j}_test_score'][i] for j in range(num_folds)]
